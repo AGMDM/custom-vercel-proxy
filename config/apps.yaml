@@ -1,0 +1,9 @@
+apps:
+  - name: "Dashboard"
+    target_url: "https://dashboard.example.com"
+  - name: "Analytics"
+    target_url: "https://analytics.example.com"
+  - name: "CRM"
+    target_url: "https://crm.example.com"
+  - name: "Support Portal"
+    target_url: "https://support.example.com"
