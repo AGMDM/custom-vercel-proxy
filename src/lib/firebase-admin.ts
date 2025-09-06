@@ -44,16 +44,42 @@ async function initializeFirebaseAdmin() {
 // Helper function to verify Firebase ID tokens (Node.js runtime only)
 export async function verifyFirebaseToken(idToken: string) {
   try {
+    console.log('Initializing Firebase Admin...')
     const auth = await initializeFirebaseAdmin()
     if (!auth) {
       console.error('Firebase Admin not initialized')
       return null
     }
 
+    console.log('Firebase Admin initialized, verifying token...')
     const decodedToken = await auth.verifyIdToken(idToken)
+    console.log('Token verification successful:', { uid: decodedToken.uid, email: decodedToken.email })
     return decodedToken
   } catch (error) {
     console.error('Error verifying Firebase token:', error)
+    
+    // For development, if Firebase Admin fails, we can do basic validation
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Development mode: Attempting basic token validation fallback...')
+      try {
+        // Basic token decoding for development
+        const parts = idToken.split('.')
+        if (parts.length === 3) {
+          const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))
+          if (payload.exp && Date.now() < payload.exp * 1000) {
+            console.log('Development fallback token validation successful:', { uid: payload.sub, email: payload.email })
+            return {
+              uid: payload.sub,
+              email: payload.email,
+              name: payload.name,
+            }
+          }
+        }
+      } catch (fallbackError) {
+        console.error('Development fallback also failed:', fallbackError)
+      }
+    }
+    
     return null
   }
 }

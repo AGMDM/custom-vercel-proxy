@@ -14,17 +14,24 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify the Firebase ID token
+    console.log('Attempting to verify Firebase token...')
     const decodedToken = await verifyFirebaseToken(idToken)
     
+    console.log('Firebase token verification result:', decodedToken ? 'Success' : 'Failed')
+    
     if (!decodedToken) {
+      console.error('Firebase token verification failed - token may be invalid or Firebase Admin not properly configured')
       return NextResponse.json(
-        { error: 'Invalid Firebase token' },
+        { error: 'Invalid Firebase token or authentication service unavailable' },
         { status: 401 }
       )
     }
 
+    console.log('Decoded token email:', decodedToken.email)
+
     // Verify the email matches the token
     if (decodedToken.email !== email) {
+      console.error('Email mismatch:', { tokenEmail: decodedToken.email, requestEmail: email })
       return NextResponse.json(
         { error: 'Email mismatch' },
         { status: 400 }

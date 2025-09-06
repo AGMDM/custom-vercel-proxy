@@ -14,21 +14,30 @@ export default function DashboardPage() {
   const [error, setError] = useState('')
   const router = useRouter()
 
+  console.log('Dashboard: Component rendered')
+
   useEffect(() => {
+    console.log('Dashboard: useEffect triggered, fetching apps...')
     fetchApps()
   }, [])
 
   const fetchApps = async () => {
     try {
+      console.log('Dashboard: Fetching apps from /api/apps...')
       const response = await fetch('/api/apps')
+      console.log('Dashboard: API response status:', response.status)
       const data = await response.json()
+      console.log('Dashboard: API response data:', data)
       
       if (response.ok) {
+        console.log('Dashboard: Apps loaded successfully:', data.apps)
         setApps(data.apps)
       } else {
+        console.error('Dashboard: Failed to load apps:', data)
         setError('Failed to load applications')
       }
     } catch (err) {
+      console.error('Dashboard: Network error:', err)
       setError('Network error')
     } finally {
       setLoading(false)

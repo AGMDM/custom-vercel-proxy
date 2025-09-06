@@ -19,27 +19,37 @@ export async function middleware(request: NextRequest) {
   // Check for Firebase authentication token
   const token = request.cookies.get('firebase-token')?.value
 
+  console.log('Middleware: Checking authentication for', pathname)
+  console.log('Middleware: Token present:', !!token)
+
   if (!token) {
+    console.log('Middleware: No token found, redirecting to login')
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
   try {
     // Verify the Firebase ID token (basic validation in Edge Runtime)
+    console.log('Middleware: Attempting to verify token')
     const decoded = await verifyFirebaseTokenEdge(token)
     
+    console.log('Middleware: Token verification result:', decoded ? 'Success' : 'Failed')
+    
     if (!decoded) {
+      console.log('Middleware: Token verification failed, redirecting to login')
       return NextResponse.redirect(new URL('/login', request.url))
     }
+
+    console.log('Middleware: Authentication successful for user:', decoded.email)
 
     // Add user info to headers for downstream use
     const response = NextResponse.next()
     response.headers.set('x-user-email', decoded.email || '')
-    response.headers.set('x-user-id', decoded.uid)
+    response.headers.set('x-user-id', decoded.uid || '')
     response.headers.set('x-user-name', decoded.name || '')
     
     return response
   } catch (error) {
-    console.error('Firebase token verification failed:', error)
+    console.error('Middleware: Firebase token verification failed:', error)
     return NextResponse.redirect(new URL('/login', request.url))
   }
 }

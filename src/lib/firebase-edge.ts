@@ -10,46 +10,81 @@
 // 4. Consider implementing token caching/blacklisting for enhanced security
 
 interface FirebaseTokenPayload {
-  uid: string
+  uid?: string
+  sub?: string  // Firebase uses 'sub' for user ID
   email?: string
   name?: string
   iat?: number
   exp?: number
   aud?: string
   iss?: string
-  sub?: string
 }
 
 // Simple JWT decoder for Firebase ID tokens (for Edge Runtime)
 // This only decodes and validates basic structure, not cryptographic verification
 function decodeFirebaseToken(token: string): FirebaseTokenPayload | null {
   try {
+    console.log('Edge: Decoding Firebase token...')
     const parts = token.split('.')
     if (parts.length !== 3) {
+      console.log('Edge: Invalid token structure - not 3 parts')
       return null
     }
 
     // Decode the payload (middle part)
-    const payload = parts[1]
-    // Add padding if needed
-    const paddedPayload = payload + '='.repeat((4 - (payload.length % 4)) % 4)
-    const decodedPayload = atob(paddedPayload.replace(/-/g, '+').replace(/_/g, '/'))
+    let payload = parts[1]
+    
+    // Add padding if needed for base64 decoding
+    while (payload.length % 4) {
+      payload += '='
+    }
+    
+    // Replace URL-safe characters
+    payload = payload.replace(/-/g, '+').replace(/_/g, '/')
+    
+    console.log('Edge: Attempting to decode payload...')
+    const decodedPayload = atob(payload)
+    console.log('Edge: Payload decoded, parsing JSON...')
     
     const tokenData = JSON.parse(decodedPayload) as FirebaseTokenPayload
 
+    console.log('Edge: Parsed token data:', {
+      uid: tokenData.sub || tokenData.uid,
+      email: tokenData.email,
+      exp: tokenData.exp,
+      currentTime: Math.floor(Date.now() / 1000)
+    })
+
+    // Firebase tokens use 'sub' field for uid
+    const uid = tokenData.sub || tokenData.uid
+    
     // Basic validation
-    if (!tokenData.uid || !tokenData.exp) {
+    if (!uid || !tokenData.exp) {
+      console.log('Edge: Missing required fields (uid or exp)')
       return null
     }
 
     // Check if token is expired
-    if (Date.now() >= tokenData.exp * 1000) {
+    const currentTime = Math.floor(Date.now() / 1000)
+    if (currentTime >= tokenData.exp) {
+      console.log('Edge: Token expired')
       return null
     }
 
-    return tokenData
+    console.log('Edge: Token validation successful')
+    
+    return {
+      uid: uid,
+      email: tokenData.email,
+      name: tokenData.name,
+      exp: tokenData.exp,
+      iat: tokenData.iat,
+      aud: tokenData.aud,
+      iss: tokenData.iss,
+      sub: tokenData.sub
+    }
   } catch (error) {
-    console.error('Error decoding Firebase token:', error)
+    console.error('Edge: Error decoding Firebase token:', error)
     return null
   }
 }

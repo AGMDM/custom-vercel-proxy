@@ -40,21 +40,27 @@ export default function LoginPage() {
 
       const data = await response.json()
 
+      console.log('Login response:', { status: response.status, data })
+
       if (response.ok) {
+        console.log('Login successful, redirecting to dashboard...')
         router.push('/dashboard')
       } else {
+        console.error('Login failed:', data)
         setError(data.error || 'Login failed')
       }
     } catch (err: any) {
       console.error('Login error:', err)
       if (err.code === 'auth/user-not-found') {
-        setError('No account found with this email address')
+        setError('No account found with this email address. Please register first or check if your email is authorized.')
       } else if (err.code === 'auth/wrong-password') {
         setError('Incorrect password')
       } else if (err.code === 'auth/invalid-email') {
         setError('Invalid email address')
       } else if (err.code === 'auth/too-many-requests') {
         setError('Too many failed login attempts. Please try again later.')
+      } else if (err.code === 'auth/invalid-credential') {
+        setError('Invalid credentials. Please check your email and password, or register if you don\'t have an account yet.')
       } else {
         setError(err.message || 'Login failed. Please try again.')
       }
