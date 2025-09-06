@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyFirebaseToken } from '@/lib/firebase-admin'
+import { verifyFirebaseTokenEdge } from '@/lib/firebase-edge'
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -24,8 +24,8 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
-    // Verify the Firebase ID token
-    const decoded = await verifyFirebaseToken(token)
+    // Verify the Firebase ID token (basic validation in Edge Runtime)
+    const decoded = await verifyFirebaseTokenEdge(token)
     
     if (!decoded) {
       return NextResponse.redirect(new URL('/login', request.url))
