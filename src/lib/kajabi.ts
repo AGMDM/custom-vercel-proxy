@@ -66,6 +66,15 @@ class KajabiAPIClient {
     this.clientSecret = process.env.KAJABI_CLIENT_SECRET || '';
   }
 
+  private isConfigured(): boolean {
+    return !!(
+      this.clientId && 
+      this.clientSecret && 
+      this.clientId !== 'your_kajabi_client_id' &&
+      this.clientSecret !== 'your_kajabi_client_secret'
+    );
+  }
+
   private async getAccessToken(): Promise<string> {
     // Check if we have a valid token
     if (this.accessToken && this.tokenExpiry && Date.now() < this.tokenExpiry) {
@@ -125,6 +134,12 @@ class KajabiAPIClient {
   }
 
   async findContactByEmail(email: string, siteId?: string): Promise<KajabiContact | null> {
+    // Check if Kajabi is properly configured first
+    if (!this.isConfigured()) {
+      console.log('Kajabi API not configured, using mock data for:', email);
+      return this.getMockContact(email);
+    }
+
     try {
       const params = new URLSearchParams({
         'filter[email_contains]': email,
@@ -149,6 +164,7 @@ class KajabiAPIClient {
     } catch (error) {
       console.error('Error searching for contact in Kajabi:', error);
       // Fall back to mock data if API is not configured
+      console.log('Falling back to mock data for:', email);
       return this.getMockContact(email);
     }
   }
@@ -159,6 +175,11 @@ class KajabiAPIClient {
     siteId: string;
     [key: string]: any;
   }): Promise<KajabiContact | null> {
+    if (!this.isConfigured()) {
+      console.log('Kajabi API not configured, cannot create contact');
+      return null;
+    }
+
     try {
       const { name, email, siteId, ...additionalData } = contactData;
       
@@ -193,6 +214,11 @@ class KajabiAPIClient {
   }
 
   async getSites(): Promise<any[]> {
+    if (!this.isConfigured()) {
+      console.log('Kajabi API not configured, returning empty sites list');
+      return [];
+    }
+
     try {
       const response = await this.makeRequest<{ data: any[] }>('/v1/sites');
       return response.data;
@@ -203,6 +229,10 @@ class KajabiAPIClient {
   }
 
   async validateCredentials(): Promise<boolean> {
+    if (!this.isConfigured()) {
+      return false;
+    }
+    
     try {
       await this.getAccessToken();
       return true;

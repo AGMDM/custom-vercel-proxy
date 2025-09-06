@@ -4,18 +4,13 @@ A secure reverse proxy application built with Next.js that provides authenticati
 
 ## Features
 
-- 🔐 **Secure Authentication**: JWT-based a3. Choose the required permissions:
-   - ✅ `view:contacts` - To search for existing contacts by email for authorization
-   - ✅ `view:customers` - To verify customer status during login
-   - ⚠️ `create:contacts` - Not needed for this integration
-   - ⚠️ `view:sites` - Not needed for this integrationtication with bcrypt password hashing
+- 🔐 **Firebase Authentication**: Secure authentication with Firebase Auth
 - 🎯 **Reverse Proxy**: Seamlessly proxy requests to configured applications
-- 🔗 **Kajabi Integration**: Mock Kajabi API integration for user verification
+- 🔗 **Kajabi Integration**: Kajabi API integration for user authorization
 - ⚙️ **Dynamic Configuration**: YAML-based application configuration
 - 🎨 **Modern UI**: Beautiful, responsive interface built with Tailwind CSS
 - 🚀 **Next.js 14**: Built with the latest Next.js App Router
-- 🔥 **Firebase Ready**: Pre-configured for Firebase Authentication (optional)
-- 🛡️ **Middleware Protection**: Route-level authentication protection
+- �️ **ID Token Verification**: Firebase ID token validation in middleware
 
 ## Architecture
 
@@ -325,21 +320,19 @@ Or register a new account at `http://localhost:3000/register`
 
 1. **Registration**: New users can register at `/register`
    - Email validation and password strength requirements
-   - **Firebase Check**: System first checks if account already exists locally
-   - If account exists → "An account already exists"
    - **Kajabi Authorization Check**: System verifies email exists in Kajabi
    - If email NOT in Kajabi → "You are not authorized to create an account"
-   - If email IS in Kajabi → Registration proceeds (authorized user)
-   - Secure password hashing with bcrypt
-   - User data stored locally in `data/users.json`
+   - If email IS in Kajabi → Firebase account creation proceeds
+   - **Firebase Account Creation**: User account created in Firebase Authentication
+   - **Secure Storage**: User data managed by Firebase (encrypted, secure)
+   - **Profile Update**: User's display name set in Firebase profile
 
 2. **Login**: User enters credentials on the login page
-3. **Local Auth**: System verifies credentials against local user database
+3. **Firebase Auth**: System authenticates user with Firebase
 4. **Kajabi Verification**: System checks if user exists and is active in Kajabi
-   - If user not found locally but exists in Kajabi → Prompt to register locally
-   - If user exists locally but not in Kajabi → Access denied
-5. **JWT Token**: Upon successful verification, a JWT token is issued
-6. **Protected Routes**: Middleware validates JWT for all protected routes
+   - If user exists in Firebase but not in Kajabi → Access denied
+5. **ID Token**: Upon successful verification, a Firebase ID token is issued
+6. **Protected Routes**: Middleware validates Firebase ID tokens for all protected routes
 7. **Dashboard Access**: Authenticated users can access the application dashboard
 
 ## Proxy Mechanism

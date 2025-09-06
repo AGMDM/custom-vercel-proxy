@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
+import { auth } from '@/lib/firebase'
 
 export default function RegisterPage() {
   const [name, setName] = useState('')
@@ -42,26 +44,69 @@ export default function RegisterPage() {
     }
 
     try {
-      const response = await fetch('/api/auth/register', {
+      // Step 1: Check if email is authorized in Kajabi first
+      const kajabiCheckResponse = await fetch('/api/auth/check-kajabi', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ email }),
+      })
+
+      const kajabiData = await kajabiCheckResponse.json()
+
+      if (!kajabiCheckResponse.ok) {
+        setError(kajabiData.error || 'Authorization check failed')
+        setLoading(false)
+        return
+      }
+
+      // Step 2: Create Firebase user if Kajabi check passed
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      
+      // Step 3: Update the user's display name
+      await updateProfile(userCredential.user, {
+        displayName: name
+      })
+
+      // Step 4: Get the ID token and send to our backend for verification
+      const idToken = await userCredential.user.getIdToken()
+      
+      const response = await fetch('/api/auth/firebase-register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          idToken,
+          name,
+          email 
+        }),
       })
 
       const data = await response.json()
 
       if (response.ok) {
-        setSuccess('Account created successfully! Redirecting to login...')
+        setSuccess('Account created successfully! Redirecting to dashboard...')
         setTimeout(() => {
-          router.push('/login')
+          router.push('/dashboard')
         }, 2000)
       } else {
-        setError(data.error || 'Registration failed')
+        // If our backend verification failed, clean up the Firebase user
+        await userCredential.user.delete()
+        setError(data.error || 'Registration verification failed')
       }
-    } catch (err) {
-      setError('Network error. Please try again.')
+    } catch (err: any) {
+      console.error('Registration error:', err)
+      if (err.code === 'auth/email-already-in-use') {
+        setError('An account already exists with this email address')
+      } else if (err.code === 'auth/weak-password') {
+        setError('Password is too weak. Please choose a stronger password.')
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Invalid email address')
+      } else {
+        setError(err.message || 'Registration failed. Please try again.')
+      }
     } finally {
       setLoading(false)
     }

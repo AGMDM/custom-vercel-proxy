@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { signInWithEmailAndPassword } from 'firebase/auth'
+import { auth } from '@/lib/firebase'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -17,12 +19,23 @@ export default function LoginPage() {
     setError('')
 
     try {
-      const response = await fetch('/api/auth/login', {
+      // Step 1: Authenticate with Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      
+      // Step 2: Get the ID token
+      const idToken = await userCredential.user.getIdToken()
+      
+      // Step 3: Send token to our backend for Kajabi verification
+      const response = await fetch('/api/auth/firebase-login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ 
+          idToken,
+          email: userCredential.user.email,
+          name: userCredential.user.displayName
+        }),
       })
 
       const data = await response.json()
@@ -32,8 +45,19 @@ export default function LoginPage() {
       } else {
         setError(data.error || 'Login failed')
       }
-    } catch (err) {
-      setError('Network error. Please try again.')
+    } catch (err: any) {
+      console.error('Login error:', err)
+      if (err.code === 'auth/user-not-found') {
+        setError('No account found with this email address')
+      } else if (err.code === 'auth/wrong-password') {
+        setError('Incorrect password')
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Invalid email address')
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('Too many failed login attempts. Please try again later.')
+      } else {
+        setError(err.message || 'Login failed. Please try again.')
+      }
     } finally {
       setLoading(false)
     }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyJWT } from '@/lib/auth-edge'
+import { verifyFirebaseToken } from '@/lib/firebase-admin'
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -16,16 +16,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Check for authentication token
-  const token = request.cookies.get('auth-token')?.value
+  // Check for Firebase authentication token
+  const token = request.cookies.get('firebase-token')?.value
 
   if (!token) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
   try {
-    // Verify the JWT token
-    const decoded = await verifyJWT(token)
+    // Verify the Firebase ID token
+    const decoded = await verifyFirebaseToken(token)
     
     if (!decoded) {
       return NextResponse.redirect(new URL('/login', request.url))
@@ -33,12 +33,13 @@ export async function middleware(request: NextRequest) {
 
     // Add user info to headers for downstream use
     const response = NextResponse.next()
-    response.headers.set('x-user-email', decoded.email)
-    response.headers.set('x-user-id', decoded.userId)
+    response.headers.set('x-user-email', decoded.email || '')
+    response.headers.set('x-user-id', decoded.uid)
+    response.headers.set('x-user-name', decoded.name || '')
     
     return response
   } catch (error) {
-    console.error('Token verification failed:', error)
+    console.error('Firebase token verification failed:', error)
     return NextResponse.redirect(new URL('/login', request.url))
   }
 }
