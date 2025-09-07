@@ -54,8 +54,9 @@ export default function DashboardPage() {
   }
 
   const handleAppClick = (app: App) => {
-    // Open the proxied app in a new window
-    window.open(`/proxy/${encodeURIComponent(app.name.toLowerCase().replace(/\s+/g, '-'))}`, '_blank')
+    // Open the proxied app in a new window using the API route
+    const appSlug = app.name.toLowerCase().replace(/\s+/g, '-')
+    window.open(`/api/proxy/${appSlug}`, '_blank')
   }
 
   if (loading) {

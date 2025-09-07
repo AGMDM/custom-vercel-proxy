@@ -41,7 +41,31 @@ export function getAppsConfig(): AppsConfig {
 
 export function getAppByName(name: string): AppConfig | undefined {
   const config = getAppsConfig()
-  return config.apps.find(app => app.name === name)
+  
+  // First try exact match
+  let app = config.apps.find(app => app.name === name)
+  
+  if (!app) {
+    // Try case-insensitive match
+    app = config.apps.find(app => app.name.toLowerCase() === name.toLowerCase())
+  }
+  
+  if (!app) {
+    // Try matching with slug transformation (spaces to dashes, lowercase)
+    const nameFromSlug = name.toLowerCase().replace(/-/g, ' ')
+    app = config.apps.find(app => app.name.toLowerCase() === nameFromSlug)
+  }
+  
+  if (!app) {
+    // Try matching the other way (transform app names to slugs)
+    const targetSlug = name.toLowerCase()
+    app = config.apps.find(app => {
+      const appSlug = app.name.toLowerCase().replace(/\s+/g, '-')
+      return appSlug === targetSlug
+    })
+  }
+  
+  return app
 }
 
 export function getAllApps(): AppConfig[] {
